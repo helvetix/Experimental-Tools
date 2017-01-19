@@ -35,14 +35,14 @@ class MACD(TradingIndicator):
         df = df.join(MACDindicator)
         return df
 
-    def macd(self, stock_dataframe):
+    def macd(self):
         MACD_name = 'MACD' + self.parameters
         MACD_signal_name = 'MACDsignal' + self.parameters
         MACD_histogram_name = 'MACDhistogram' + self.parameters
 
-        EMAfast = pd.Series.ewm(self.dataframe['Close'], span=self.fast, min_periods=self.slow-1).mean()
-        EMAslow = pd.Series.ewm(self.dataframe['Close'], span=self.slow, min_periods=self.slow-1).mean()
-        _macd = pd.Series(EMAfast - EMAslow, name=MACD_name)
+        _fast = pd.Series.ewm(self.dataframe['Close'], span=self.fast, min_periods=self.slow-1).mean()
+        _slow = pd.Series.ewm(self.dataframe['Close'], span=self.slow, min_periods=self.slow-1).mean()
+        _macd = pd.Series(_fast - _slow, name=MACD_name)
 
         _signal = pd.Series(pd.Series.ewm(_macd, span=9, min_periods=8).mean(), name=MACD_signal_name)
 
@@ -54,17 +54,19 @@ class MACD(TradingIndicator):
 
         self.trigger = _histogram[-1]
 
-        stock_dataframe[MACD_name] = pd.Series(EMAfast - EMAslow, name=MACD_name)
-        result = stock_dataframe.join(_signal)
-        result = result.join(_histogram)
-
-        return result
+        return self.macd_dataframe
 
     def plot(self):
         self.macd_dataframe.plot(subplots=False, grid=True)
         return
 
-    def update(self, open_high_low_close_volume):
+    def update(self, value):
+        print type(value)
+
+        if self.dataframe is None:
+            self.dataframe = pd.DataFrame([value])
+        else:
+            self.dataframe = self.dataframe.append([value])
         return
 
     def get_trigger(self):
@@ -73,8 +75,9 @@ class MACD(TradingIndicator):
 
 if __name__ == "__main__":
     stock_dataframe = pd.DataFrame.from_csv('data/orcl-2015.csv')
-    macd = MACD(fast=12, slow=26, signal=9, dataframe=stock_dataframe)
-    macd_dataframe = macd.macd(stock_dataframe)
+    macd = MACD(fast=12, slow=26, signal=9)
+    macd.update(stock_dataframe)
+    macd_dataframe = macd.macd()
 
     print macd.get_trigger()
 
@@ -82,5 +85,16 @@ if __name__ == "__main__":
 
     stock_dataframe['Close'].plot()
     macd.plot()
+#     plt.grid()
+#     plt.show()
+    macd2 = MACD(fast=12, slow=26, signal=9)
+    for index, row in stock_dataframe.iterrows():
+        macd2.update(row)
+        macd2.macd()
+
+    #macd2.update(stock_dataframe)
+    macd2.macd()
+    macd2.plot()
     plt.grid()
     plt.show()
+   

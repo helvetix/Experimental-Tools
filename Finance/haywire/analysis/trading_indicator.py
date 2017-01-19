@@ -5,7 +5,7 @@ class TradingIndicator(object):
 
     def __init__(self, name):
         self.name = name
-        self.trigger = 0
+        self.trigger = None
         return
 
     @abc.abstractmethod
@@ -14,6 +14,9 @@ class TradingIndicator(object):
 
     @abc.abstractmethod
     def get_trigger(self):
+        """Get the value of the trading trigger.
+        """
+
         return self.trigger
 
     def get_name(self):

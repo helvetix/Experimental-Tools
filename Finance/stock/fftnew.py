@@ -36,18 +36,64 @@ def normalize(fft, precision=0):
 
 
 class FFT:
-    def __init__(self, rfft, zeroThreshold=0.0, precision=20):
+    def __init__(self, rfft, precision=20):
         self.rfft = rfft
 
         self.nPointsPerPeriod = (len(rfft) - 1) * 2
         self.bias = round(np.abs(self.rfft[0]) / (len(self.rfft) - 1) / 2, precision)
         return
 
-    def get_fft(self, precision=0):
+    def get_rounded_fft(self, precision=0):
         return [np.around(x, precision) for x in self.rfft]
 
     def _compute_amplitude(self, x, y):
         return math.sqrt((x * x) + (y * y))
+
+    def magnitude(self):
+        result = np.abs(self.rfft)[1:]
+        return result
+
+    def filter(self, minimum_limit=1.0):
+        """Return a new filtered FFT.
+        """
+
+        zero = np.complex(0, 0)
+
+        result = np.ndarray(shape=self.rfft.shape, dtype=self.rfft.dtype)
+        result[0] = self.rfft[0]
+
+        index = 1
+        for c in self.rfft[1:]:
+            magnitude = np.abs(c)
+            if magnitude > minimum_limit:
+                result[index] = c
+            else:
+                result[index] = zero
+            index += 1
+
+        return FFT(result)
+
+    def inverse(self):
+        result = np.fft.irfft(self.rfft)
+        return result
+
+    def plot(self, plotter):
+        x_indicies = np.arange(1, len(np.abs(self.rfft)[1:]) + 1)
+        bug_workaround = [x if x > 0 else 1e-17 for x in self.magnitude()]
+        plotter.bar(x_indicies, bug_workaround, 0.35, color='r')
+        return
+
+    def strength(self):
+        result = []
+        magnitudes = self.magnitude()
+
+        index = 1
+        for magnitude in magnitudes:
+            result.append((index, magnitude))
+            index += 1
+
+        result = sorted(result, key=lambda m: m[1], reverse=True)
+        return result
 
     def normalize(self, precision=0):
         print "normalize: fft", self.fft
@@ -175,12 +221,6 @@ def waveGeneratorDerivative(FFT):
 def rfftDerivative(rfft):
     result = [(0, 0.0, 0)]
 
-# F ( A cos(Fx) - B sin(Fx))
-#
-# 1 ( 1 cos(Fx) - 0 sin(Fx)) => cos(Fx)
-# 2 ( 1 cos(2x) - 0 sin(2x)) => 2cos(2x)
-# tuple = (F, -B*F, A*F)
-
     for i in range(1, len(rfft)):
         p = rfft[i]
         result.append(tuple([p[0], -p[2]*p[0], p[1]*p[0]]))
@@ -197,7 +237,7 @@ def fft_derivative(simple_fft):
     return result
 
 
-numberOfPoints = 32
+numberOfPoints = 90
 bias = (0, 100.0, 0.0)
 actualFFT = [numberOfPoints, bias, (1.0, 1.0, 0.0), (2.0, 1.0, 0.0), (4.0, 1.0, 1.0)]
 actualFFT = [numberOfPoints, bias, (1.0, 1.0, 0.0)]
@@ -220,70 +260,34 @@ else:
 fft = FFT(np.fft.rfft(sample))
 
 print "raw FFT", fft
-print "rounded FFT", fft.get_fft(0)
 
-print
-
-print "derivative", [np.around(a) for a in sampleDerivativeFFT]
-print "computed  ", fft.derivative(0)
-
-
-#generated = waveGenerator2(normalizedFFT)
-generated = np.fft.irfft(fft.rfft)
-reducedGenerated = np.fft.irfft(fft.rfft)
+generated = fft.inverse()
 
 plt.grid()
 plt.plot(sample)
-plt.plot(sampleDerivative)
 
 plt.figure()
 plt.grid()
-# plt.plot(generated)
-plt.plot(reducedGenerated)
-
-# derivative = waveGeneratorDerivative(normalizedFFT)
-# 
-# computedDerivativeFFT = fft.derivative()
-# generatedDerivative = waveGenerator2(computedDerivativeFFT)
+plt.plot(generated)
 
 plt.figure()
-#plt.hist(np.abs(fft.rfft)[1:], rwidth=.1)
+fft.plot(plt)
 
-x_indicies = np.arange(len(np.abs(fft.rfft)[1:]))
-x_indicies = np.arange(1, len(np.abs(fft.rfft)[1:]) + 1)
-plt.bar(x_indicies, np.abs(fft.rfft)[1:], 0.35, color='r')
-# plt.plot(generatedDerivative)
-# plt.grid()
+print "magnitude()", fft.magnitude()
+
+filtered_fft = fft.filter(10)
+print "filtered_fft", filtered_fft
+print "magnitude", filtered_fft.magnitude()
+print filtered_fft.strength()
+
+plt.figure()
+
+filtered_fft.plot(plt)
+filtered = filtered_fft.inverse()
+
+plt.figure()
+plt.plot(filtered)
 
 plt.show()
 
-if False:
-    x = []
-    
-    portfolio = portfolio.Portfolio(10000.0)
-    
-    offset = 0
-    if True:
-        for i in range(0, numberOfPoints):
-            point = offset + i
-            predictedPrice = pointGenerator(normalizedFFT, point)
-    
-            indicator = pointGenerator(computedDerivativeFFT, point)
-            x.append(indicator)
-            portfolio.transaction(predictedPrice, indicator, explain=True)
-    else:
-        for i in range(0, len(data['Close'][numberOfPoints:])):
-            point = offset + i
-            predictedPrice = pointGenerator(normalizedFFT, point)
-            actualPrice = data['Close'][numberOfPoints:][point]
-    
-            indicator = pointGenerator(computedDerivativeFFT, point)
-            x.append(indicator)
-            portfolio.transaction(actualPrice, indicator, explain=True)
-    
-    print portfolio, portfolio.getValue()
 
-# plt.figure()
-# plt.plot(x)
-# plt.grid()
-# plt.show()
