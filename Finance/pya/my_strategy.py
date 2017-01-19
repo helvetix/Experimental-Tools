@@ -20,8 +20,8 @@ class MyStrategy(strategy.BacktestingStrategy):
         self.__position = None
 
     def onExitOk(self, position):
-        execInfo = position.getExitOrder().getExecutionInfo()
-        # self.info("SELL at $%.2f" % (execInfo.getPrice()))
+        execution_info = position.getExitOrder().getExecutionInfo()
+        # self.info("SELL at $%.2f" % (execution_info.getPrice()))
         self.__position = None
 
     def onExitCanceled(self, position):

@@ -253,41 +253,38 @@ if True:
     sampleDerivativeFFT = np.fft.rfft(sampleDerivative)
     print "actualFFT spec", actualFFT
     print "derivativeFFT", len(sampleDerivativeFFT), sampleDerivativeFFT
-else:
-    data = pd.DataFrame.from_csv('orcl-2015.csv')
-    sample = data['Close'][0:numberOfPoints]
 
-fft = FFT(np.fft.rfft(sample))
+data = pd.DataFrame.from_csv('orcl-2015.csv')
+sample1 = data['Close'][0:numberOfPoints]
+sample2 = data['Close'][numberOfPoints:numberOfPoints*2]
+sample3 = data['Close'][numberOfPoints*2:numberOfPoints*3]
 
-print "raw FFT", fft
+fft1 = FFT(np.fft.rfft(sample1))
+filtered_fft1 = fft1.filter(10)
 
-generated = fft.inverse()
+fft2 = FFT(np.fft.rfft(sample2))
+fft3 = FFT(np.fft.rfft(sample3))
 
-plt.grid()
-plt.plot(sample)
+plt.figure()
+fft1.plot(plt)
+plt.figure()
+fft2.plot(plt)
+plt.figure()
+fft3.plot(plt)
 
+# plt.figure()
+# plt.grid()
+# plt.plot(sample1)
 plt.figure()
 plt.grid()
-plt.plot(generated)
+plt.plot(fft1.inverse())
 
 plt.figure()
-fft.plot(plt)
+filtered_fft1.plot(plt)
+filtered = filtered_fft1.inverse()
 
-print "magnitude()", fft.magnitude()
-
-filtered_fft = fft.filter(10)
-print "filtered_fft", filtered_fft
-print "magnitude", filtered_fft.magnitude()
-print filtered_fft.strength()
-
-plt.figure()
-
-filtered_fft.plot(plt)
-filtered = filtered_fft.inverse()
-
-plt.figure()
-plt.plot(filtered)
+# plt.figure()
+# plt.plot(filtered)
 
 plt.show()
-
 
