@@ -1,7 +1,6 @@
 import numpy as np
 import sys
 import math
-import portfolio
 import pandas as pd
 import pandas_datareader.data
 import matplotlib.pyplot as plt
@@ -40,6 +39,7 @@ class FFT:
         self.rfft = rfft
 
         self.nPointsPerPeriod = (len(rfft) - 1) * 2
+        self.precision = precision
         self.bias = round(np.abs(self.rfft[0]) / (len(self.rfft) - 1) / 2, precision)
         return
 
@@ -71,7 +71,7 @@ class FFT:
                 result[index] = zero
             index += 1
 
-        return FFT(result)
+        return FFT(result, precision=self.precision)
 
     def inverse(self):
         result = np.fft.irfft(self.rfft)
@@ -84,13 +84,17 @@ class FFT:
         return
 
     def strength(self):
+        """Return a list of tuples of the signals in this FFT sorted by strongest first.
+        Each tuple consists of the harmonic and the magnitude.
+        """
+
         result = []
         magnitudes = self.magnitude()
 
-        index = 1
+        harmonic = 1
         for magnitude in magnitudes:
-            result.append((index, magnitude))
-            index += 1
+            result.append((harmonic, magnitude))
+            harmonic += 1
 
         result = sorted(result, key=lambda m: m[1], reverse=True)
         return result
@@ -142,7 +146,7 @@ class FFT:
 
         for i in range(0, len(self.fft)):
             p = self.rfft[i]
-            result.append(np.complex(-self.rfft[i].imag, self.rfft[i].real))
+            result.append(np.complex(-p.imag, p.real))
 
         return result
 
@@ -162,7 +166,7 @@ def loadLines():
 #
 # What I need is the ability to generate a single sample that represents a day.
 # Have it oscillate over several days.
-# 
+#
 # For a stock price, it gets sampled once per day, it oscillates over several days.
 #
 def pointGenerator(FFT, index):
@@ -237,7 +241,7 @@ def fft_derivative(simple_fft):
     return result
 
 
-numberOfPoints = 90
+numberOfPoints = 60
 bias = (0, 100.0, 0.0)
 actualFFT = [numberOfPoints, bias, (1.0, 1.0, 0.0), (2.0, 1.0, 0.0), (4.0, 1.0, 1.0)]
 actualFFT = [numberOfPoints, bias, (1.0, 1.0, 0.0)]
@@ -260,15 +264,16 @@ sample2 = data['Close'][numberOfPoints:numberOfPoints*2]
 sample3 = data['Close'][numberOfPoints*2:numberOfPoints*3]
 
 fft1 = FFT(np.fft.rfft(sample1))
-filtered_fft1 = fft1.filter(10)
-
 fft2 = FFT(np.fft.rfft(sample2))
 fft3 = FFT(np.fft.rfft(sample3))
 
 plt.figure()
 fft1.plot(plt)
+fft2.plot(plt)
+
 plt.figure()
 fft2.plot(plt)
+
 plt.figure()
 fft3.plot(plt)
 
@@ -280,6 +285,7 @@ plt.grid()
 plt.plot(fft1.inverse())
 
 plt.figure()
+filtered_fft1 = fft1.filter(10)
 filtered_fft1.plot(plt)
 filtered = filtered_fft1.inverse()
 
@@ -287,4 +293,3 @@ filtered = filtered_fft1.inverse()
 # plt.plot(filtered)
 
 plt.show()
-
